@@ -73,6 +73,11 @@ func (h *OpenAIGatewayHandler) CountTokens(c *gin.Context) {
 	}
 
 	reqModel := parsedReq.Model
+	ensureCompositeTargetPlatform(c, apiKey, reqModel)
+	if !compositeTargetPlatformAllowed(c, apiKey, reqModel, service.PlatformOpenAI) {
+		h.anthropicErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Model is not supported by this OpenAI-compatible endpoint for composite groups")
+		return
+	}
 	routingModel := service.NormalizeOpenAICompatRequestedModel(reqModel)
 	preferredMappedModel := resolveOpenAIMessagesDispatchMappedModel(apiKey, reqModel)
 	reqLog = reqLog.With(zap.String("model", reqModel), zap.Bool("stream", parsedReq.Stream))
@@ -111,7 +116,7 @@ func (h *OpenAIGatewayHandler) CountTokens(c *gin.Context) {
 		service.OpenAIEndpointCapabilityChatCompletions,
 		false,
 		false,
-		openAICompatibleRequestPlatform(apiKey),
+		openAICompatibleRequestPlatform(c.Request.Context(), apiKey),
 	)
 	service.SetOpsLatencyMs(c, service.OpsAuthLatencyMsKey, time.Since(requestStart).Milliseconds())
 	if err != nil {
