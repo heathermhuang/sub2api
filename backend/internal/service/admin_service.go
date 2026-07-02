@@ -2780,21 +2780,48 @@ func normalizeAccountConcurrency(platform, accountType string, concurrency int) 
 	return concurrency
 }
 
+func (s *adminServiceImpl) defaultAccountGroupIDs(ctx context.Context, platform string) []int64 {
+	if s.groupRepo == nil || strings.TrimSpace(platform) == "" {
+		return nil
+	}
+
+	groups, err := s.groupRepo.ListActiveByPlatform(ctx, platform)
+	if err != nil || len(groups) == 0 {
+		return nil
+	}
+
+	for _, name := range []string{platform + "-default", platform} {
+		if id, ok := findGroupIDByName(groups, name); ok {
+			return []int64{id}
+		}
+	}
+
+	if len(groups) == 1 && groups[0].ID > 0 {
+		return []int64{groups[0].ID}
+	}
+
+	return nil
+}
+
+func findGroupIDByName(groups []Group, name string) (int64, bool) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return 0, false
+	}
+	for _, group := range groups {
+		if group.ID > 0 && strings.EqualFold(strings.TrimSpace(group.Name), name) {
+			return group.ID, true
+		}
+	}
+	return 0, false
+}
+
 func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccountInput) (*Account, error) {
 	// 绑定分组
-	groupIDs := input.GroupIDs
+	groupIDs := append([]int64(nil), input.GroupIDs...)
 	// 如果没有指定分组,自动绑定对应平台的默认分组
 	if len(groupIDs) == 0 && !input.SkipDefaultGroupBind {
-		defaultGroupName := input.Platform + "-default"
-		groups, err := s.groupRepo.ListActiveByPlatform(ctx, input.Platform)
-		if err == nil {
-			for _, g := range groups {
-				if g.Name == defaultGroupName {
-					groupIDs = []int64{g.ID}
-					break
-				}
-			}
-		}
+		groupIDs = s.defaultAccountGroupIDs(ctx, input.Platform)
 	}
 
 	// 检查混合渠道风险（除非用户已确认）
@@ -3397,15 +3424,7 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 	} else if len(parent.GroupIDs) > 0 {
 		groupIDs = append([]int64(nil), parent.GroupIDs...)
 	} else if s.groupRepo != nil {
-		defaultGroupName := PlatformOpenAI + "-default"
-		if groups, gerr := s.groupRepo.ListActiveByPlatform(ctx, PlatformOpenAI); gerr == nil {
-			for _, g := range groups {
-				if g.Name == defaultGroupName {
-					groupIDs = []int64{g.ID}
-					break
-				}
-			}
-		}
+		groupIDs = s.defaultAccountGroupIDs(ctx, PlatformOpenAI)
 	}
 
 	// 4. 构造影子账号（安全不变量：Credentials 恒不含 auth token，仅含 model_mapping）。

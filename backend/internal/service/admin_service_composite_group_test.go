@@ -120,6 +120,54 @@ func TestAdminService_CreateAccountAllowsCompositeGroupAssignment(t *testing.T) 
 	require.ElementsMatch(t, []int64{99}, accountRepo.bindGroupsByAccount[7])
 }
 
+func TestAdminService_CreateAccountDefaultsToPlatformNamedGroup(t *testing.T) {
+	accountRepo := &accountRepoStubForBulkUpdate{createID: 8}
+	groupRepo := &groupRepoStubForAdmin{
+		listActiveByPlatformGroups: []Group{
+			{ID: 22, Name: "openai", Platform: PlatformOpenAI, Status: StatusActive},
+			{ID: 33, Name: "OpenAI custom", Platform: PlatformOpenAI, Status: StatusActive},
+		},
+	}
+	svc := &adminServiceImpl{accountRepo: accountRepo, groupRepo: groupRepo}
+
+	account, err := svc.CreateAccount(context.Background(), &CreateAccountInput{
+		Name:                  "OpenAI OAuth",
+		Platform:              PlatformOpenAI,
+		Type:                  AccountTypeOAuth,
+		Concurrency:           1,
+		SkipMixedChannelCheck: true,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, int64(8), account.ID)
+	require.Equal(t, 1, groupRepo.listActiveByPlatformCalls)
+	require.Equal(t, PlatformOpenAI, groupRepo.listActiveByPlatformPlatform)
+	require.ElementsMatch(t, []int64{22}, accountRepo.bindGroupsByAccount[8])
+}
+
+func TestAdminService_CreateAccountPrefersDefaultNamedGroup(t *testing.T) {
+	accountRepo := &accountRepoStubForBulkUpdate{createID: 9}
+	groupRepo := &groupRepoStubForAdmin{
+		listActiveByPlatformGroups: []Group{
+			{ID: 22, Name: "openai", Platform: PlatformOpenAI, Status: StatusActive},
+			{ID: 44, Name: "openai-default", Platform: PlatformOpenAI, Status: StatusActive},
+		},
+	}
+	svc := &adminServiceImpl{accountRepo: accountRepo, groupRepo: groupRepo}
+
+	account, err := svc.CreateAccount(context.Background(), &CreateAccountInput{
+		Name:                  "OpenAI OAuth",
+		Platform:              PlatformOpenAI,
+		Type:                  AccountTypeOAuth,
+		Concurrency:           1,
+		SkipMixedChannelCheck: true,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, int64(9), account.ID)
+	require.ElementsMatch(t, []int64{44}, accountRepo.bindGroupsByAccount[9])
+}
+
 func TestAdminService_UpdateAccountAllowsCompositeGroupAssignment(t *testing.T) {
 	accountRepo := &accountRepoStubForBulkUpdate{
 		getByIDAccounts: map[int64]*Account{
