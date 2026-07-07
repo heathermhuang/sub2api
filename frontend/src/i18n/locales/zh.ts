@@ -416,6 +416,7 @@ export default {
     groups: '分组管理',
     channels: '渠道管理',
     availableChannels: '可用渠道',
+    customDomains: '自定义域名',
     subscriptions: '订阅管理',
     accounts: '账号管理',
     proxies: 'IP管理',
@@ -1158,6 +1159,43 @@ export default {
       intervals: '阶梯定价',
       unitPerMillion: '/ 1M token',
       unitPerRequest: '/ 次'
+    }
+  },
+
+  customDomains: {
+    title: '自定义域名',
+    description: '使用已验证的主机名作为你的 API Base URL',
+    addDomain: '添加域名',
+    domainPlaceholder: 'api.example.com',
+    gatewayTarget: '网关目标',
+    cnameTarget: 'CNAME 目标',
+    apiBaseUrl: 'API Base URL',
+    dnsRecords: 'DNS 记录',
+    txtRecord: 'TXT 记录',
+    cnameRecord: 'CNAME 记录',
+    recordName: '名称',
+    recordValue: '值',
+    verify: '验证',
+    verifying: '验证中...',
+    copyBaseUrl: '复制 Base URL',
+    empty: '暂无自定义域名',
+    disabled: '自定义域名功能当前未启用',
+    created: '域名已添加',
+    deleted: '域名已删除',
+    verified: '域名已验证',
+    verifyPending: 'DNS 验证仍在等待生效',
+    loadFailed: '加载自定义域名失败',
+    saveFailed: '保存自定义域名失败',
+    deleteConfirmTitle: '删除自定义域名',
+    deleteConfirmMessage: '确定删除 {domain}？现有 DNS 记录将不再被识别。',
+    lastChecked: '上次检查',
+    lastError: '最后错误',
+    neverChecked: '未检查',
+    statuses: {
+      pending_dns: '等待 DNS',
+      active: '已启用',
+      disabled: '已禁用',
+      error: '错误'
     }
   },
 
@@ -2683,6 +2721,31 @@ export default {
         syncModelsAlreadyUpToDate: '模型列表已是最新',
         syncModelsError: '同步模型失败'
       }
+    },
+
+    customDomains: {
+      title: '自定义域名',
+      description: '管理已验证的入站 API 主机名',
+      globalFeature: '全局开关',
+      enabled: '已启用',
+      disabled: '已禁用',
+      enable: '启用',
+      disable: '禁用',
+      configSaved: '配置已更新',
+      filters: {
+        domain: '域名',
+        status: '状态',
+        userId: '用户 ID'
+      },
+      allStatuses: '全部状态',
+      owner: '所属用户',
+      ownerId: '用户 #{id}',
+      actions: '操作',
+      listEmpty: '没有匹配当前筛选条件的自定义域名',
+      verified: '域名已验证',
+      disabledDomain: '域名已禁用',
+      enabledDomain: '域名已启用',
+      deletedDomain: '域名已删除'
     },
 
     riskControl: {

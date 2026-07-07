@@ -504,6 +504,9 @@ type UsageLog struct {
 	UserAgent *string `json:"user_agent"`
 	// IPAddress is visible to the owner of the usage record.
 	IPAddress *string `json:"ip_address,omitempty"`
+	// CustomDomain records the verified API hostname used for the request.
+	CustomDomainID *int64  `json:"custom_domain_id,omitempty"`
+	CustomDomain   *string `json:"custom_domain,omitempty"`
 
 	// Cache TTL Override 标记
 	CacheTTLOverridden bool `json:"cache_ttl_overridden"`

@@ -416,6 +416,7 @@ export default {
     groups: 'Groups',
     channels: 'Channels',
     availableChannels: 'Available Channels',
+    customDomains: 'Custom Domains',
     subscriptions: 'Subscriptions',
     accounts: 'Accounts',
     proxies: 'Proxies',
@@ -1154,6 +1155,43 @@ export default {
       intervals: 'Tiered Pricing',
       unitPerMillion: '/ 1M tokens',
       unitPerRequest: '/ request'
+    }
+  },
+
+  customDomains: {
+    title: 'Custom Domains',
+    description: 'Use a verified hostname as your API base URL',
+    addDomain: 'Add Domain',
+    domainPlaceholder: 'api.example.com',
+    gatewayTarget: 'Gateway Target',
+    cnameTarget: 'CNAME Target',
+    apiBaseUrl: 'API Base URL',
+    dnsRecords: 'DNS Records',
+    txtRecord: 'TXT Record',
+    cnameRecord: 'CNAME Record',
+    recordName: 'Name',
+    recordValue: 'Value',
+    verify: 'Verify',
+    verifying: 'Verifying...',
+    copyBaseUrl: 'Copy Base URL',
+    empty: 'No custom domains',
+    disabled: 'Custom domains are currently disabled',
+    created: 'Domain added',
+    deleted: 'Domain deleted',
+    verified: 'Domain verified',
+    verifyPending: 'DNS verification is still pending',
+    loadFailed: 'Failed to load custom domains',
+    saveFailed: 'Failed to save custom domain',
+    deleteConfirmTitle: 'Delete Custom Domain',
+    deleteConfirmMessage: 'Delete {domain}? Existing DNS records will stop being recognized.',
+    lastChecked: 'Last checked',
+    lastError: 'Last error',
+    neverChecked: 'Never checked',
+    statuses: {
+      pending_dns: 'Pending DNS',
+      active: 'Active',
+      disabled: 'Disabled',
+      error: 'Error'
     }
   },
 
@@ -2608,6 +2646,31 @@ export default {
          syncModelsError: 'Failed to sync models'
        }
      },
+
+    customDomains: {
+      title: 'Custom Domains',
+      description: 'Manage verified inbound API hostnames',
+      globalFeature: 'Global Feature',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      enable: 'Enable',
+      disable: 'Disable',
+      configSaved: 'Configuration updated',
+      filters: {
+        domain: 'Domain',
+        status: 'Status',
+        userId: 'User ID'
+      },
+      allStatuses: 'All statuses',
+      owner: 'Owner',
+      ownerId: 'User #{id}',
+      actions: 'Actions',
+      listEmpty: 'No custom domains match the current filters',
+      verified: 'Domain verified',
+      disabledDomain: 'Domain disabled',
+      enabledDomain: 'Domain enabled',
+      deletedDomain: 'Domain deleted'
+    },
 
     riskControl: {
       title: 'Risk Control',

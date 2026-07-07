@@ -633,6 +633,8 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		MediaType:             l.MediaType,
 		UserAgent:             l.UserAgent,
 		IPAddress:             l.IPAddress,
+		CustomDomainID:        l.CustomDomainID,
+		CustomDomain:          l.CustomDomain,
 		CacheTTLOverridden:    l.CacheTTLOverridden,
 		BillingMode:           l.BillingMode,
 		CreatedAt:             l.CreatedAt,

@@ -6540,6 +6540,8 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	if input.IPAddress != "" {
 		usageLog.IPAddress = &input.IPAddress
 	}
+	usageLog.CustomDomainID = customDomainIDFromContext(ctx)
+	usageLog.CustomDomain = customDomainFromContext(ctx)
 
 	if apiKey.GroupID != nil {
 		usageLog.GroupID = apiKey.GroupID
