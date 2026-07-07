@@ -602,6 +602,7 @@ var ProviderSet = wire.NewSet(
 	NewAntigravityGatewayService,
 	ProvideRateLimitService,
 	NewAccountUsageService,
+	NewCustomDomainService,
 	NewAccountTestService,
 	ProvideSettingService,
 	NewDataManagementService,

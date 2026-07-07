@@ -106,6 +106,23 @@ func RegisterAdminRoutes(
 
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
+
+		// 自定义域名
+		registerCustomDomainRoutes(admin, h)
+	}
+}
+
+func registerCustomDomainRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	customDomains := admin.Group("/custom-domains")
+	{
+		customDomains.GET("/config", h.Admin.CustomDomain.GetConfig)
+		customDomains.PUT("/config", h.Admin.CustomDomain.UpdateConfig)
+		customDomains.GET("", h.Admin.CustomDomain.List)
+		customDomains.POST("", h.Admin.CustomDomain.Create)
+		customDomains.POST("/:id/verify", h.Admin.CustomDomain.Verify)
+		customDomains.POST("/:id/disable", h.Admin.CustomDomain.Disable)
+		customDomains.POST("/:id/enable", h.Admin.CustomDomain.Enable)
+		customDomains.DELETE("/:id", h.Admin.CustomDomain.Delete)
 	}
 }
 
