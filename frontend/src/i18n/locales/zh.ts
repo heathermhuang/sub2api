@@ -1149,6 +1149,7 @@ export default {
       billingModeToken: '按 Token',
       billingModePerRequest: '按次',
       billingModeImage: '按图片',
+      billingModeVideo: '按视频',
       inputPrice: '输入',
       outputPrice: '输出',
       cacheWritePrice: '缓存写入',
@@ -2411,6 +2412,15 @@ export default {
         finalPricePreview: '最终单次媒体价格预览',
         notConfigured: '未配置'
       },
+      videoPricing: {
+        title: '视频生成计费',
+        description: '配置 Grok 视频生成基础单价，留空则使用默认视频价格',
+        independentMultiplier: '视频倍率独立',
+        videoMultiplier: '视频独立倍率',
+        modeHint: '默认关闭独立倍率时，视频费用 = 视频价格 × 当前分组有效倍率；开启独立倍率后，视频费用 = 视频价格 × 视频独立倍率。',
+        finalPricePreview: '最终单次视频价格预览',
+        notConfigured: '未配置'
+      },
       peakRate: {
         enable: '启用高峰倍率',
         peakStart: '高峰开始',
@@ -2537,6 +2547,7 @@ export default {
         billingModeToken: '按 Token',
         billingModePerRequest: '按次',
         billingModeImage: '按图片',
+        billingModeVideo: '按视频',
         inputPrice: '输入',
         outputPrice: '输出',
         cacheWritePrice: '缓存写入',
@@ -5014,6 +5025,7 @@ export default {
       billingModeToken: '按量',
       billingModePerRequest: '按次',
       billingModeImage: '按次(图片)',
+      billingModeVideo: '按次(视频)',
       allBillingModes: '全部计费模式',
       ipAddress: 'IP',
       clickToViewBalance: '点击查看充值记录',
