@@ -853,7 +853,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.134"
+                :placeholder="getImagePricePlaceholder(createForm.platform, 'image_price_1k')"
               />
             </div>
             <div>
@@ -864,7 +864,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getImagePricePlaceholder(createForm.platform, 'image_price_2k')"
               />
             </div>
             <div>
@@ -875,7 +875,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.268"
+                :placeholder="getImagePricePlaceholder(createForm.platform, 'image_price_4k')"
               />
             </div>
           </div>
@@ -997,7 +997,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(createForm.platform, 'video_price_480p')"
               />
             </div>
             <div>
@@ -1008,7 +1008,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(createForm.platform, 'video_price_720p')"
               />
             </div>
             <div>
@@ -1019,7 +1019,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(createForm.platform, 'video_price_1080p')"
               />
             </div>
           </div>
@@ -2332,7 +2332,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.134"
+                :placeholder="getImagePricePlaceholder(editForm.platform, 'image_price_1k')"
               />
             </div>
             <div>
@@ -2343,7 +2343,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getImagePricePlaceholder(editForm.platform, 'image_price_2k')"
               />
             </div>
             <div>
@@ -2354,7 +2354,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.268"
+                :placeholder="getImagePricePlaceholder(editForm.platform, 'image_price_4k')"
               />
             </div>
           </div>
@@ -2476,7 +2476,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(editForm.platform, 'video_price_480p')"
               />
             </div>
             <div>
@@ -2487,7 +2487,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(editForm.platform, 'video_price_720p')"
               />
             </div>
             <div>
@@ -2498,7 +2498,7 @@
                 step="0.001"
                 min="0"
                 class="input"
-                placeholder="0.201"
+                :placeholder="getVideoPricePlaceholder(editForm.platform, 'video_price_1080p')"
               />
             </div>
           </div>
@@ -3872,6 +3872,10 @@ import {
 import { createModelsListCandidatesTracker } from "./groupsModelsListCandidates";
 import { normalizeSupportedModelScopesForPlatform } from "./groupsSupportedModelScopes";
 import {
+  getDefaultImagePreviewPrice,
+  getDefaultVideoPreviewPrice,
+  getImagePricePlaceholder,
+  getVideoPricePlaceholder,
   imagePricingI18nKey,
   supportsImagePricingPlatform,
   supportsVideoPricingPlatform,
@@ -4703,6 +4707,7 @@ type ImagePricingFormState = {
 };
 
 type VideoPricingFormState = {
+  platform: GroupPlatform;
   rate_multiplier: number;
   video_rate_independent: boolean;
   video_rate_multiplier: number;
@@ -4729,6 +4734,14 @@ const normalizePreviewNumber = (value: number | string | null | undefined, fallb
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parsePreviewPrice = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
 const formatImagePricePreview = (value: number | string | null | undefined) => {
@@ -4759,10 +4772,12 @@ const buildImageFinalPricePreview = (form: ImagePricingFormState) => {
     : normalizePreviewNumber(form.rate_multiplier, 1);
   const multiplier = imageMultiplier;
   return imagePricingTiers.map((tier) => {
-    const basePrice = normalizePreviewNumber(form[tier.key]);
+    const basePrice =
+      parsePreviewPrice(form[tier.key]) ??
+      getDefaultImagePreviewPrice(form.platform, tier.key);
     return {
       label: tier.label,
-      value: basePrice > 0
+      value: basePrice !== null
         ? formatImagePricePreview(basePrice * multiplier)
         : t("admin.groups.imagePricing.notConfigured"),
     };
@@ -4774,10 +4789,12 @@ const buildVideoFinalPricePreview = (form: VideoPricingFormState) => {
     ? normalizePreviewNumber(form.video_rate_multiplier, 1)
     : normalizePreviewNumber(form.rate_multiplier, 1);
   return videoPricingTiers.map((tier) => {
-    const basePrice = normalizePreviewNumber(form[tier.key]);
+    const basePrice =
+      parsePreviewPrice(form[tier.key]) ??
+      getDefaultVideoPreviewPrice(form.platform, tier.key);
     return {
       label: tier.label,
-      value: basePrice > 0
+      value: basePrice !== null
         ? formatVideoPricePreview(basePrice * multiplier)
         : t("admin.groups.videoPricing.notConfigured"),
     };
