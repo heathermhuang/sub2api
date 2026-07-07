@@ -5,15 +5,15 @@ import { mount } from '@vue/test-utils'
 import PlanEditDialog from '../PlanEditDialog.vue'
 import type { AdminGroup } from '@/types'
 
-vi.mock('vue-i18n', async () => {
-  const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
-  return {
-    ...actual,
-    useI18n: () => ({
-      t: (key: string) => key,
-    }),
-  }
-})
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (key === 'payment.admin.subscriptionCnyPayPreview') return `preview ${params?.amount}`
+      if (key === 'payment.admin.subscriptionCnyPayPreviewWithFee') return `fee ${params?.feeRate} ${params?.total}`
+      return key
+    },
+  }),
+}))
 
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({
@@ -108,6 +108,25 @@ const groupFixture = (overrides: Partial<AdminGroup>): AdminGroup => ({
   ...overrides,
 })
 
+function mountDialog(paymentConfig: Record<string, unknown> | null) {
+  return mount(PlanEditDialog, {
+    props: {
+      show: true,
+      plan: null,
+      groups: [],
+      paymentConfig,
+    },
+    global: {
+      stubs: {
+        BaseDialog: BaseDialogStub,
+        Select: true,
+        Icon: true,
+        GroupBadge: true,
+      },
+    },
+  })
+}
+
 describe('PlanEditDialog', () => {
   it('allows composite subscription groups for payment plans', () => {
     const wrapper = mount(PlanEditDialog, {
@@ -144,5 +163,33 @@ describe('PlanEditDialog', () => {
 
     expect(options).toContain('OpenAI + Claude + Gemini + Grok — composite (1.2x)')
     expect(options).not.toContain('Standard OpenAI — openai (1x)')
+  })
+})
+
+describe('PlanEditDialog subscription CNY payment preview', () => {
+  it('shows CNY channel charge using the configured subscription rate and fee', async () => {
+    const wrapper = mountDialog({
+      subscription_usd_to_cny_rate: 7.15,
+      recharge_fee_rate: 2.5,
+    })
+
+    await wrapper.find('input[type="number"]').setValue('9.99')
+
+    expect(wrapper.text()).toContain('preview')
+    expect(wrapper.text()).toContain('¥71.43')
+    expect(wrapper.text()).toContain('fee 2.5')
+    expect(wrapper.text()).toContain('¥73.22')
+  })
+
+  it('hides the preview when the subscription rate is not configured', async () => {
+    const wrapper = mountDialog({
+      subscription_usd_to_cny_rate: 0,
+      recharge_fee_rate: 2.5,
+    })
+
+    await wrapper.find('input[type="number"]').setValue('9.99')
+
+    expect(wrapper.text()).not.toContain('preview')
+    expect(wrapper.text()).not.toContain('¥71.43')
   })
 })
