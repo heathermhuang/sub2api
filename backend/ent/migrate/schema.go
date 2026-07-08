@@ -799,6 +799,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "all_users", Type: field.TypeBool, Default: false},
 		{Name: "domain", Type: field.TypeString, Size: 253},
 		{Name: "status", Type: field.TypeString, Size: 32, Default: "pending_dns"},
 		{Name: "verification_token", Type: field.TypeString, Size: 128},
@@ -820,7 +821,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "custom_domains_users_custom_domains",
-				Columns:    []*schema.Column{CustomDomainsColumns[15]},
+				Columns:    []*schema.Column{CustomDomainsColumns[16]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -829,17 +830,55 @@ var (
 			{
 				Name:    "customdomain_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CustomDomainsColumns[15]},
+				Columns: []*schema.Column{CustomDomainsColumns[16]},
+			},
+			{
+				Name:    "customdomain_all_users",
+				Unique:  false,
+				Columns: []*schema.Column{CustomDomainsColumns[4]},
 			},
 			{
 				Name:    "customdomain_status",
 				Unique:  false,
-				Columns: []*schema.Column{CustomDomainsColumns[5]},
+				Columns: []*schema.Column{CustomDomainsColumns[6]},
 			},
 			{
 				Name:    "customdomain_domain",
 				Unique:  false,
-				Columns: []*schema.Column{CustomDomainsColumns[4]},
+				Columns: []*schema.Column{CustomDomainsColumns[5]},
+			},
+		},
+	}
+	// CustomDomainUsersColumns holds the columns for the "custom_domain_users" table.
+	CustomDomainUsersColumns = []*schema.Column{
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "custom_domain_id", Type: field.TypeInt64},
+		{Name: "user_id", Type: field.TypeInt64},
+	}
+	// CustomDomainUsersTable holds the schema information for the "custom_domain_users" table.
+	CustomDomainUsersTable = &schema.Table{
+		Name:       "custom_domain_users",
+		Columns:    CustomDomainUsersColumns,
+		PrimaryKey: []*schema.Column{CustomDomainUsersColumns[1], CustomDomainUsersColumns[2]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "custom_domain_users_custom_domains_custom_domain",
+				Columns:    []*schema.Column{CustomDomainUsersColumns[1]},
+				RefColumns: []*schema.Column{CustomDomainsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "custom_domain_users_users_user",
+				Columns:    []*schema.Column{CustomDomainUsersColumns[2]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "customdomainuser_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{CustomDomainUsersColumns[2]},
 			},
 		},
 	}
@@ -2054,6 +2093,7 @@ var (
 		ChannelMonitorHistoriesTable,
 		ChannelMonitorRequestTemplatesTable,
 		CustomDomainsTable,
+		CustomDomainUsersTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
@@ -2140,6 +2180,11 @@ func init() {
 	CustomDomainsTable.ForeignKeys[0].RefTable = UsersTable
 	CustomDomainsTable.Annotation = &entsql.Annotation{
 		Table: "custom_domains",
+	}
+	CustomDomainUsersTable.ForeignKeys[0].RefTable = CustomDomainsTable
+	CustomDomainUsersTable.ForeignKeys[1].RefTable = UsersTable
+	CustomDomainUsersTable.Annotation = &entsql.Annotation{
+		Table: "custom_domain_users",
 	}
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",

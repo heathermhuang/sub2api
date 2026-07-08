@@ -51,6 +51,9 @@ type ChannelMonitorRequestTemplate func(*sql.Selector)
 // CustomDomain is the predicate function for customdomain builders.
 type CustomDomain func(*sql.Selector)
 
+// CustomDomainUser is the predicate function for customdomainuser builders.
+type CustomDomainUser func(*sql.Selector)
+
 // ErrorPassthroughRule is the predicate function for errorpassthroughrule builders.
 type ErrorPassthroughRule func(*sql.Selector)
 

@@ -30,6 +30,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
 	"github.com/Wei-Shaw/sub2api/ent/customdomain"
+	"github.com/Wei-Shaw/sub2api/ent/customdomainuser"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -93,6 +94,8 @@ type Client struct {
 	ChannelMonitorRequestTemplate *ChannelMonitorRequestTemplateClient
 	// CustomDomain is the client for interacting with the CustomDomain builders.
 	CustomDomain *CustomDomainClient
+	// CustomDomainUser is the client for interacting with the CustomDomainUser builders.
+	CustomDomainUser *CustomDomainUserClient
 	// ErrorPassthroughRule is the client for interacting with the ErrorPassthroughRule builders.
 	ErrorPassthroughRule *ErrorPassthroughRuleClient
 	// Group is the client for interacting with the Group builders.
@@ -167,6 +170,7 @@ func (c *Client) init() {
 	c.ChannelMonitorHistory = NewChannelMonitorHistoryClient(c.config)
 	c.ChannelMonitorRequestTemplate = NewChannelMonitorRequestTemplateClient(c.config)
 	c.CustomDomain = NewCustomDomainClient(c.config)
+	c.CustomDomainUser = NewCustomDomainUserClient(c.config)
 	c.ErrorPassthroughRule = NewErrorPassthroughRuleClient(c.config)
 	c.Group = NewGroupClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
@@ -298,6 +302,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
 		ChannelMonitorRequestTemplate: NewChannelMonitorRequestTemplateClient(cfg),
 		CustomDomain:                  NewCustomDomainClient(cfg),
+		CustomDomainUser:              NewCustomDomainUserClient(cfg),
 		ErrorPassthroughRule:          NewErrorPassthroughRuleClient(cfg),
 		Group:                         NewGroupClient(cfg),
 		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
@@ -356,6 +361,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
 		ChannelMonitorRequestTemplate: NewChannelMonitorRequestTemplateClient(cfg),
 		CustomDomain:                  NewCustomDomainClient(cfg),
+		CustomDomainUser:              NewCustomDomainUserClient(cfg),
 		ErrorPassthroughRule:          NewErrorPassthroughRuleClient(cfg),
 		Group:                         NewGroupClient(cfg),
 		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
@@ -413,7 +419,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AuthIdentity, c.AuthIdentityChannel, c.BatchImageEvent, c.BatchImageItem,
 		c.BatchImageJob, c.ChannelMonitor, c.ChannelMonitorDailyRollup,
 		c.ChannelMonitorHistory, c.ChannelMonitorRequestTemplate, c.CustomDomain,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
+		c.CustomDomainUser, c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
 		c.IdentityAdoptionDecision, c.PaymentAuditLog, c.PaymentOrder,
 		c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage,
 		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
@@ -433,7 +439,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AuthIdentity, c.AuthIdentityChannel, c.BatchImageEvent, c.BatchImageItem,
 		c.BatchImageJob, c.ChannelMonitor, c.ChannelMonitorDailyRollup,
 		c.ChannelMonitorHistory, c.ChannelMonitorRequestTemplate, c.CustomDomain,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
+		c.CustomDomainUser, c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
 		c.IdentityAdoptionDecision, c.PaymentAuditLog, c.PaymentOrder,
 		c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage,
 		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
@@ -478,6 +484,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ChannelMonitorRequestTemplate.mutate(ctx, m)
 	case *CustomDomainMutation:
 		return c.CustomDomain.mutate(ctx, m)
+	case *CustomDomainUserMutation:
+		return c.CustomDomainUser.mutate(ctx, m)
 	case *ErrorPassthroughRuleMutation:
 		return c.ErrorPassthroughRule.mutate(ctx, m)
 	case *GroupMutation:
@@ -2856,6 +2864,38 @@ func (c *CustomDomainClient) QueryUser(_m *CustomDomain) *UserQuery {
 	return query
 }
 
+// QueryAuthorizedUsers queries the authorized_users edge of a CustomDomain.
+func (c *CustomDomainClient) QueryAuthorizedUsers(_m *CustomDomain) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customdomain.Table, customdomain.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, customdomain.AuthorizedUsersTable, customdomain.AuthorizedUsersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCustomDomainUsers queries the custom_domain_users edge of a CustomDomain.
+func (c *CustomDomainClient) QueryCustomDomainUsers(_m *CustomDomain) *CustomDomainUserQuery {
+	query := (&CustomDomainUserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(customdomain.Table, customdomain.FieldID, id),
+			sqlgraph.To(customdomainuser.Table, customdomainuser.CustomDomainColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, customdomain.CustomDomainUsersTable, customdomain.CustomDomainUsersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *CustomDomainClient) Hooks() []Hook {
 	hooks := c.hooks.CustomDomain
@@ -2880,6 +2920,122 @@ func (c *CustomDomainClient) mutate(ctx context.Context, m *CustomDomainMutation
 		return (&CustomDomainDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown CustomDomain mutation op: %q", m.Op())
+	}
+}
+
+// CustomDomainUserClient is a client for the CustomDomainUser schema.
+type CustomDomainUserClient struct {
+	config
+}
+
+// NewCustomDomainUserClient returns a client for the CustomDomainUser from the given config.
+func NewCustomDomainUserClient(c config) *CustomDomainUserClient {
+	return &CustomDomainUserClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `customdomainuser.Hooks(f(g(h())))`.
+func (c *CustomDomainUserClient) Use(hooks ...Hook) {
+	c.hooks.CustomDomainUser = append(c.hooks.CustomDomainUser, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `customdomainuser.Intercept(f(g(h())))`.
+func (c *CustomDomainUserClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CustomDomainUser = append(c.inters.CustomDomainUser, interceptors...)
+}
+
+// Create returns a builder for creating a CustomDomainUser entity.
+func (c *CustomDomainUserClient) Create() *CustomDomainUserCreate {
+	mutation := newCustomDomainUserMutation(c.config, OpCreate)
+	return &CustomDomainUserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CustomDomainUser entities.
+func (c *CustomDomainUserClient) CreateBulk(builders ...*CustomDomainUserCreate) *CustomDomainUserCreateBulk {
+	return &CustomDomainUserCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CustomDomainUserClient) MapCreateBulk(slice any, setFunc func(*CustomDomainUserCreate, int)) *CustomDomainUserCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CustomDomainUserCreateBulk{err: fmt.Errorf("calling to CustomDomainUserClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CustomDomainUserCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CustomDomainUserCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CustomDomainUser.
+func (c *CustomDomainUserClient) Update() *CustomDomainUserUpdate {
+	mutation := newCustomDomainUserMutation(c.config, OpUpdate)
+	return &CustomDomainUserUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CustomDomainUserClient) UpdateOne(_m *CustomDomainUser) *CustomDomainUserUpdateOne {
+	mutation := newCustomDomainUserMutation(c.config, OpUpdateOne)
+	mutation.custom_domain = &_m.CustomDomainID
+	mutation.user = &_m.UserID
+	return &CustomDomainUserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CustomDomainUser.
+func (c *CustomDomainUserClient) Delete() *CustomDomainUserDelete {
+	mutation := newCustomDomainUserMutation(c.config, OpDelete)
+	return &CustomDomainUserDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Query returns a query builder for CustomDomainUser.
+func (c *CustomDomainUserClient) Query() *CustomDomainUserQuery {
+	return &CustomDomainUserQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCustomDomainUser},
+		inters: c.Interceptors(),
+	}
+}
+
+// QueryCustomDomain queries the custom_domain edge of a CustomDomainUser.
+func (c *CustomDomainUserClient) QueryCustomDomain(_m *CustomDomainUser) *CustomDomainQuery {
+	return c.Query().
+		Where(customdomainuser.CustomDomainID(_m.CustomDomainID), customdomainuser.UserID(_m.UserID)).
+		QueryCustomDomain()
+}
+
+// QueryUser queries the user edge of a CustomDomainUser.
+func (c *CustomDomainUserClient) QueryUser(_m *CustomDomainUser) *UserQuery {
+	return c.Query().
+		Where(customdomainuser.CustomDomainID(_m.CustomDomainID), customdomainuser.UserID(_m.UserID)).
+		QueryUser()
+}
+
+// Hooks returns the client hooks.
+func (c *CustomDomainUserClient) Hooks() []Hook {
+	return c.hooks.CustomDomainUser
+}
+
+// Interceptors returns the client interceptors.
+func (c *CustomDomainUserClient) Interceptors() []Interceptor {
+	return c.inters.CustomDomainUser
+}
+
+func (c *CustomDomainUserClient) mutate(ctx context.Context, m *CustomDomainUserMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CustomDomainUserCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CustomDomainUserUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CustomDomainUserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CustomDomainUserDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CustomDomainUser mutation op: %q", m.Op())
 	}
 }
 
@@ -6013,6 +6169,22 @@ func (c *UserClient) QueryCustomDomains(_m *User) *CustomDomainQuery {
 	return query
 }
 
+// QueryAuthorizedCustomDomains queries the authorized_custom_domains edge of a User.
+func (c *UserClient) QueryAuthorizedCustomDomains(_m *User) *CustomDomainQuery {
+	query := (&CustomDomainClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(customdomain.Table, customdomain.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.AuthorizedCustomDomainsTable, user.AuthorizedCustomDomainsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryUserAllowedGroups queries the user_allowed_groups edge of a User.
 func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: c.config}).Query()
@@ -6022,6 +6194,22 @@ func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(userallowedgroup.Table, userallowedgroup.UserColumn),
 			sqlgraph.Edge(sqlgraph.O2M, true, user.UserAllowedGroupsTable, user.UserAllowedGroupsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCustomDomainUsers queries the custom_domain_users edge of a User.
+func (c *UserClient) QueryCustomDomainUsers(_m *User) *CustomDomainUserQuery {
+	query := (&CustomDomainUserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(customdomainuser.Table, customdomainuser.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, user.CustomDomainUsersTable, user.CustomDomainUsersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -6844,23 +7032,25 @@ type (
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, BatchImageEvent, BatchImageItem, BatchImageJob,
 		ChannelMonitor, ChannelMonitorDailyRollup, ChannelMonitorHistory,
-		ChannelMonitorRequestTemplate, CustomDomain, ErrorPassthroughRule, Group,
-		IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
-		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
-		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
-		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Hook
+		ChannelMonitorRequestTemplate, CustomDomain, CustomDomainUser,
+		ErrorPassthroughRule, Group, IdempotencyRecord, IdentityAdoptionDecision,
+		PaymentAuditLog, PaymentOrder, PaymentProviderInstance, PendingAuthSession,
+		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
+		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserPlatformQuota, UserSubscription []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, BatchImageEvent, BatchImageItem, BatchImageJob,
 		ChannelMonitor, ChannelMonitorDailyRollup, ChannelMonitorHistory,
-		ChannelMonitorRequestTemplate, CustomDomain, ErrorPassthroughRule, Group,
-		IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
-		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
-		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
-		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Interceptor
+		ChannelMonitorRequestTemplate, CustomDomain, CustomDomainUser,
+		ErrorPassthroughRule, Group, IdempotencyRecord, IdentityAdoptionDecision,
+		PaymentAuditLog, PaymentOrder, PaymentProviderInstance, PendingAuthSession,
+		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
+		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserPlatformQuota, UserSubscription []ent.Interceptor
 	}
 )
 

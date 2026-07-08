@@ -20,6 +20,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
 	"github.com/Wei-Shaw/sub2api/ent/customdomain"
+	"github.com/Wei-Shaw/sub2api/ent/customdomainuser"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -885,8 +886,12 @@ func init() {
 	customdomain.DefaultUpdatedAt = customdomainDescUpdatedAt.Default.(func() time.Time)
 	// customdomain.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	customdomain.UpdateDefaultUpdatedAt = customdomainDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// customdomainDescAllUsers is the schema descriptor for all_users field.
+	customdomainDescAllUsers := customdomainFields[1].Descriptor()
+	// customdomain.DefaultAllUsers holds the default value on creation for the all_users field.
+	customdomain.DefaultAllUsers = customdomainDescAllUsers.Default.(bool)
 	// customdomainDescDomain is the schema descriptor for domain field.
-	customdomainDescDomain := customdomainFields[1].Descriptor()
+	customdomainDescDomain := customdomainFields[2].Descriptor()
 	// customdomain.DomainValidator is a validator for the "domain" field. It is called by the builders before save.
 	customdomain.DomainValidator = func() func(string) error {
 		validators := customdomainDescDomain.Validators
@@ -904,13 +909,13 @@ func init() {
 		}
 	}()
 	// customdomainDescStatus is the schema descriptor for status field.
-	customdomainDescStatus := customdomainFields[2].Descriptor()
+	customdomainDescStatus := customdomainFields[3].Descriptor()
 	// customdomain.DefaultStatus holds the default value on creation for the status field.
 	customdomain.DefaultStatus = customdomainDescStatus.Default.(string)
 	// customdomain.StatusValidator is a validator for the "status" field. It is called by the builders before save.
 	customdomain.StatusValidator = customdomainDescStatus.Validators[0].(func(string) error)
 	// customdomainDescVerificationToken is the schema descriptor for verification_token field.
-	customdomainDescVerificationToken := customdomainFields[3].Descriptor()
+	customdomainDescVerificationToken := customdomainFields[4].Descriptor()
 	// customdomain.VerificationTokenValidator is a validator for the "verification_token" field. It is called by the builders before save.
 	customdomain.VerificationTokenValidator = func() func(string) error {
 		validators := customdomainDescVerificationToken.Validators
@@ -928,7 +933,7 @@ func init() {
 		}
 	}()
 	// customdomainDescVerificationTxtName is the schema descriptor for verification_txt_name field.
-	customdomainDescVerificationTxtName := customdomainFields[4].Descriptor()
+	customdomainDescVerificationTxtName := customdomainFields[5].Descriptor()
 	// customdomain.VerificationTxtNameValidator is a validator for the "verification_txt_name" field. It is called by the builders before save.
 	customdomain.VerificationTxtNameValidator = func() func(string) error {
 		validators := customdomainDescVerificationTxtName.Validators
@@ -946,7 +951,7 @@ func init() {
 		}
 	}()
 	// customdomainDescVerificationTxtValue is the schema descriptor for verification_txt_value field.
-	customdomainDescVerificationTxtValue := customdomainFields[5].Descriptor()
+	customdomainDescVerificationTxtValue := customdomainFields[6].Descriptor()
 	// customdomain.VerificationTxtValueValidator is a validator for the "verification_txt_value" field. It is called by the builders before save.
 	customdomain.VerificationTxtValueValidator = func() func(string) error {
 		validators := customdomainDescVerificationTxtValue.Validators
@@ -964,9 +969,15 @@ func init() {
 		}
 	}()
 	// customdomainDescCnameTarget is the schema descriptor for cname_target field.
-	customdomainDescCnameTarget := customdomainFields[6].Descriptor()
+	customdomainDescCnameTarget := customdomainFields[7].Descriptor()
 	// customdomain.CnameTargetValidator is a validator for the "cname_target" field. It is called by the builders before save.
 	customdomain.CnameTargetValidator = customdomainDescCnameTarget.Validators[0].(func(string) error)
+	customdomainuserFields := schema.CustomDomainUser{}.Fields()
+	_ = customdomainuserFields
+	// customdomainuserDescCreatedAt is the schema descriptor for created_at field.
+	customdomainuserDescCreatedAt := customdomainuserFields[2].Descriptor()
+	// customdomainuser.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customdomainuser.DefaultCreatedAt = customdomainuserDescCreatedAt.Default.(func() time.Time)
 	errorpassthroughruleMixin := schema.ErrorPassthroughRule{}.Mixin()
 	errorpassthroughruleMixinFields0 := errorpassthroughruleMixin[0].Fields()
 	_ = errorpassthroughruleMixinFields0
