@@ -56,6 +56,7 @@ func TestGrokTokenProviderRefreshesExpiredTokenOnRequestPath(t *testing.T) {
 		ID:       54,
 		Platform: PlatformGrok,
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 		Credentials: map[string]any{
 			"access_token":  "expired-access-token",
 			"refresh_token": "refresh-token",
@@ -98,6 +99,7 @@ func TestGrokTokenProviderRefreshFailureUnschedulesWithRedactedReason(t *testing
 		ID:       55,
 		Platform: PlatformGrok,
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 		Credentials: map[string]any{
 			"access_token":  "expired-access-token",
 			"refresh_token": "refresh-token",
@@ -128,4 +130,36 @@ func TestGrokTokenProviderRefreshFailureUnschedulesWithRedactedReason(t *testing
 	require.NotNil(t, tempCache.lastState)
 	require.NotContains(t, tempCache.lastState.ErrorMessage, "leaked-access")
 	require.NotContains(t, tempCache.lastState.ErrorMessage, "leaked-refresh")
+}
+
+func TestGrokTokenProviderProviderScopedFailureDoesNotMutateAccount(t *testing.T) {
+	account := &Account{ID: 56, Platform: PlatformGrok, Type: AccountTypeOAuth, Status: StatusActive}
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{
+			name: "ambiguous persistence containment",
+			err:  &providerCycleContainmentRefreshError{err: errors.New("database unavailable")},
+		},
+		{
+			name: "shared provider configuration",
+			err:  &providerConfigurationRefreshError{err: errors.New("invalid_client")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &tokenRefreshAccountRepo{}
+			tempCache := &tempUnschedCacheStub{}
+			provider := NewGrokTokenProvider(repo, nil)
+			provider.SetTempUnschedCache(tempCache)
+
+			provider.markTempUnschedulable(account, tt.err)
+
+			require.Zero(t, repo.setErrorCalls)
+			require.Zero(t, repo.setTempUnschedCalls)
+			require.Zero(t, tempCache.setCalls)
+		})
+	}
 }
