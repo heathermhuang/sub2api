@@ -127,6 +127,12 @@ func (p *GrokTokenProvider) markTempUnschedulable(account *Account, refreshErr e
 	if p == nil || p.accountRepo == nil || account == nil {
 		return
 	}
+	if isProviderScopedTerminalRefreshError(refreshErr) {
+		// Shared provider/configuration or ambiguous post-refresh persistence
+		// failures are not account-health evidence. The provider cycle owns
+		// containment; do not quarantine the selected account on this path.
+		return
+	}
 	now := time.Now()
 	until := now.Add(tokenRefreshTempUnschedDuration)
 	redactedErr := "unknown error"
