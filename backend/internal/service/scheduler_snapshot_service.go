@@ -838,13 +838,22 @@ func (s *SchedulerSnapshotService) defaultBuckets(ctx context.Context) ([]Schedu
 		if group.Platform == "" {
 			continue
 		}
-		buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: group.Platform, Mode: SchedulerModeSingle})
-		buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: group.Platform, Mode: SchedulerModeForced})
-		if group.Platform == PlatformAnthropic || group.Platform == PlatformGemini {
-			buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: group.Platform, Mode: SchedulerModeMixed})
+		for _, platform := range schedulerPlatformsForGroup(group.Platform) {
+			buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: platform, Mode: SchedulerModeSingle})
+			buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: platform, Mode: SchedulerModeForced})
+			if platform == PlatformAnthropic || platform == PlatformGemini {
+				buckets = append(buckets, SchedulerBucket{GroupID: group.ID, Platform: platform, Mode: SchedulerModeMixed})
+			}
 		}
 	}
 	return dedupeBuckets(buckets), nil
+}
+
+func schedulerPlatformsForGroup(platform string) []string {
+	if platform == PlatformComposite {
+		return []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok}
+	}
+	return []string{platform}
 }
 
 func dedupeBuckets(in []SchedulerBucket) []SchedulerBucket {
