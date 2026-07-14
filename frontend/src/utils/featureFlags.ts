@@ -104,6 +104,11 @@ export const FeatureFlags = {
     mode: 'opt-in',
     label: 'Available Channels',
   }),
+  customDomains: defineFlag({
+    key: 'custom_domains_enabled',
+    mode: 'opt-in',
+    label: 'Custom Domains',
+  }),
   payment: defineFlag({
     key: 'payment_enabled',
     mode: 'opt-out',

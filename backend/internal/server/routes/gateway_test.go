@@ -44,6 +44,7 @@ func newGatewayRoutesTestRouter(platform ...string) *gin.Engine {
 		nil,
 		nil,
 		nil,
+		nil,
 		cfg,
 	)
 

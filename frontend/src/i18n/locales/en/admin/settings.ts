@@ -30,6 +30,13 @@ export default {
           enabled: 'Enable Available Channels',
           enabledHint: 'When off, the sidebar entry is hidden and the endpoint returns an empty list.',
         },
+        customDomains: {
+          title: 'Custom Domains',
+          description: 'Allow verified hostnames to serve as API base URLs. Disabled by default.',
+          configureLink: 'Manage hostnames in Custom Domains',
+          enabled: 'Enable Custom Domains',
+          enabledHint: 'When off, custom-domain routes are rejected and sidebar entries are hidden.',
+        },
         riskControl: {
           title: 'Risk Control',
           description: 'Enable the content moderation menu and gateway audit entry point. Disabled by default.',
