@@ -30,6 +30,13 @@ export default {
           enabled: '启用可用渠道',
           enabledHint: '关闭后用户端侧边栏入口隐藏，接口返回空数组。',
         },
+        customDomains: {
+          title: '自定义域名',
+          description: '允许已验证的主机名作为 API Base URL。默认关闭。',
+          configureLink: '前往 自定义域名 管理主机名',
+          enabled: '启用自定义域名',
+          enabledHint: '关闭后自定义域名路由会被拒绝，侧边栏入口隐藏。',
+        },
         riskControl: {
           title: '风控中心',
           description: '启用内容审计菜单和全端点请求审核入口。默认关闭。',
