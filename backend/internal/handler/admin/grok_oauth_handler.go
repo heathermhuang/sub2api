@@ -23,6 +23,7 @@ type GrokOAuthHandler struct {
 	grokOAuthService *service.GrokOAuthService
 	adminService     service.AdminService
 	quotaService     *service.GrokQuotaService
+	importProber     grokUsageProber
 	reconciler       service.GrokOAuthReconciler
 }
 
@@ -36,6 +37,7 @@ func NewGrokOAuthHandler(
 		grokOAuthService: grokOAuthService,
 		adminService:     adminService,
 		quotaService:     quotaService,
+		importProber:     quotaService,
 		reconciler:       reconciler,
 	}
 }
@@ -257,6 +259,7 @@ func (h *GrokOAuthHandler) CreateAccountFromOAuth(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	h.scheduleGrokImportProbe(account)
 	response.Success(c, dto.AccountFromService(account))
 }
 
@@ -393,6 +396,7 @@ func (h *GrokOAuthHandler) createAccountFromSSOToken(ctx context.Context, req Gr
 	if err != nil {
 		return grokSSOImportWorkerResult{item: GrokSSOToOAuthItemResult{Index: index, Name: name, Email: tokenInfo.Email, Error: grokSSOImportErrorMessage(err)}}
 	}
+	h.scheduleGrokImportProbe(account)
 	return grokSSOImportWorkerResult{
 		created: true,
 		item: GrokSSOToOAuthItemResult{
