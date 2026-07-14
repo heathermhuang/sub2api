@@ -236,6 +236,8 @@ func grokCredentialAcquisitionContext(ctx context.Context, c *gin.Context) (cont
 func classifyGrokCredentialFailure(account *Account, err error) grokCredentialFailureClass {
 	stableReason := strings.ToLower(strings.TrimSpace(infraerrors.Reason(err)))
 	message := ""
+	var containmentErr *providerCycleContainmentRefreshError
+	var configurationErr *providerConfigurationRefreshError
 	if err != nil {
 		message = strings.ToLower(err.Error())
 	}
@@ -249,6 +251,10 @@ func classifyGrokCredentialFailure(account *Account, err error) grokCredentialFa
 	}
 
 	switch {
+	case errors.As(err, &containmentErr):
+		return grokCredentialFailureClass{scope: GatewayFailureScopeProvider, reason: GrokCredentialReasonProviderDown, action: NextAccountStop, message: "Grok OAuth shared provider state is temporarily unavailable"}
+	case errors.As(err, &configurationErr):
+		return grokCredentialFailureClass{scope: GatewayFailureScopeProvider, reason: GrokCredentialReasonProviderConfig, action: NextAccountStop, message: "Grok OAuth provider configuration is unavailable"}
 	case errors.Is(err, errGrokOAuthRefreshTokenMissing), errors.Is(err, errGrokOAuthAccessTokenMissing), errors.Is(err, errGrokOAuthAccessTokenExpired):
 		return grokCredentialFailureClass{scope: GatewayFailureScopeAccount, reason: GrokCredentialReasonMissing, action: NextAccountRetry, permanent: true, message: "Grok OAuth credentials are missing or expired"}
 	case contains("invalid_grant", "invalid_refresh_token", "token_expired", "refresh_token_reused", "refresh_token_invalidated", "app_session_terminated"):
