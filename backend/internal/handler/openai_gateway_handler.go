@@ -625,7 +625,13 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 		}
 		if previousResponseID != "" {
 			strictContinuationPinned := scheduleDecision.StickyPreviousHit ||
-				(explicitSessionHash != "" && scheduleDecision.StickySessionHit)
+				(explicitSessionHash != "" && scheduleDecision.StickySessionHit) ||
+				h.gatewayService.IsOpenAIResponseBoundToAccount(
+					c.Request.Context(),
+					apiKey.GroupID,
+					previousResponseID,
+					account.ID,
+				)
 			if !account.IsOpenAIStrictResponsesPassthroughEnabled() || !strictContinuationPinned {
 				if selection.ReleaseFunc != nil {
 					selection.ReleaseFunc()
