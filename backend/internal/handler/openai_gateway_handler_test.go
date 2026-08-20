@@ -855,7 +855,7 @@ func TestOpenAIResponses_RejectsMessageIDAsPreviousResponseID(t *testing.T) {
 	require.Contains(t, w.Body.String(), "previous_response_id must be a response.id")
 }
 
-func TestOpenAIResponses_RejectsHTTPContinuationPreviousResponseID(t *testing.T) {
+func TestOpenAIResponses_HTTPContinuationReachesStrictRouting(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	w := httptest.NewRecorder()
@@ -879,9 +879,12 @@ func TestOpenAIResponses_RejectsHTTPContinuationPreviousResponseID(t *testing.T)
 	h := newOpenAIHandlerForPreviousResponseIDValidation(t, nil)
 	h.Responses(c)
 
-	require.Equal(t, http.StatusBadRequest, w.Code)
-	require.Contains(t, w.Body.String(), "Responses WebSocket v2")
-	require.Contains(t, w.Body.String(), "previous_response_id")
+	// This fixture intentionally has no billing/account dependencies. Reaching
+	// their 502 proves a valid resp_* continuation passed request validation and
+	// entered the strict routing pipeline instead of the legacy WS-only 400.
+	require.Equal(t, http.StatusBadGateway, w.Code)
+	require.NotContains(t, w.Body.String(), "Responses WebSocket v2")
+	require.NotContains(t, w.Body.String(), "previous_response_id is only supported")
 }
 
 func TestOpenAIResponses_FunctionCallOutputHTTPGuidanceDoesNotSuggestPreviousResponseReuse(t *testing.T) {
@@ -2953,6 +2956,25 @@ data: {"type":"response.failed","error":{"message":"This content was flagged"}}
 		reported := openAIForwardErrorAlreadyCommunicated(c, before, errors.New("upstream response failed: This content was flagged"))
 
 		require.True(t, reported)
+	})
+
+	t.Run("strict raw upstream HTTP error stays untouched", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, EndpointResponses, nil)
+		before := c.Writer.Size()
+		c.Data(http.StatusConflict, "application/json", []byte(`{"error":{"message":"continuation state missing"}}`))
+		originalBody := w.Body.String()
+
+		reported := openAIForwardErrorAlreadyCommunicated(
+			c,
+			before,
+			errors.New("upstream response failed: strict Responses upstream returned HTTP 409"),
+		)
+
+		require.True(t, reported)
+		require.Equal(t, http.StatusConflict, w.Code)
+		require.Equal(t, originalBody, w.Body.String())
 	})
 
 	t.Run("no write still needs fallback", func(t *testing.T) {
