@@ -333,12 +333,9 @@ describe('EditAccountModal', () => {
 
     const wrapper = mountModal(account)
 
-    expect(
-      (wrapper.get('[data-testid="edit-openai-responses-forward-mode"]').element as HTMLSelectElement).value
-    ).toBe('strict_raw')
-    expect(
-      (wrapper.get('[data-testid="edit-openai-strict-no-auth"]').element as HTMLInputElement).checked
-    ).toBe(true)
+    expect(wrapper.get('[data-testid="edit-openai-target-responses-bridge"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="edit-openai-bridge-generic"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="edit-openai-bridge-auth-private"]').attributes('aria-checked')).toBe('true')
 
     await wrapper.get('form#edit-account-form').trigger('submit.prevent')
 
@@ -352,6 +349,91 @@ describe('EditAccountModal', () => {
     expect(payload.credentials).not.toHaveProperty('api_key')
     expect(payload.upstream_billing_probe_enabled).toBe(false)
     expect(payload.upstream_billing_rate_sync_enabled).toBe(false)
+  })
+
+  it('rehydrates and round-trips the unofficial preset from generic persisted fields', async () => {
+    const account = buildAccount()
+    account.credentials = {
+      base_url: 'https://bridge.example/v1',
+      openai_upstream_auth_mode: 'none',
+      header_override_enabled: true,
+      header_overrides: { 'x-bridge-secret': 'stored-secret' },
+      openai_capabilities: ['chat_completions'],
+      model_mapping: {
+        'chatgpt-web/light': 'chatgpt-web/light',
+        'chatgpt-web/high': 'chatgpt-web/high',
+        'gpt-5.2': 'gpt-5.2'
+      }
+    }
+    account.credentials_status = { has_api_key: false }
+    account.concurrency = 7
+    account.extra = {
+      openai_responses_forward_mode: 'strict_raw',
+      openai_responses_mode: 'force_responses',
+      openai_apikey_responses_websockets_v2_mode: 'ctx_pool',
+      openai_apikey_responses_websockets_v2_enabled: true,
+      upstream_billing_probe_enabled: true,
+      upstream_billing_rate_sync_enabled: true
+    }
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
+
+    const wrapper = mountModal(account)
+
+    expect(wrapper.get('[data-testid="edit-openai-target-responses-bridge"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="edit-openai-bridge-chatgpt-web"]').attributes('aria-checked')).toBe('true')
+    expect((wrapper.get('[data-testid="edit-chatgpt-web-tier-light"]').element as HTMLInputElement).checked).toBe(true)
+    expect((wrapper.get('[data-testid="edit-chatgpt-web-tier-high"]').element as HTMLInputElement).checked).toBe(true)
+    expect(wrapper.find('[data-testid="edit-openai-ws-mode-select"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="openai-responses-mode-select"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="edit-header-override-toggle"]').attributes('role')).toBe('switch')
+    expect(wrapper.get('[data-testid="upstream-billing-auto-probe"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-testid="edit-chatgpt-web-tier-high"]').setValue(false)
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    const payload = updateAccountMock.mock.calls[0]?.[1]
+    expect(payload.concurrency).toBe(1)
+    expect(payload.upstream_billing_probe_enabled).toBe(false)
+    expect(payload.upstream_billing_rate_sync_enabled).toBe(false)
+    expect(payload.credentials).toMatchObject({
+      openai_upstream_auth_mode: 'none',
+      header_override_enabled: true,
+      header_overrides: { 'x-bridge-secret': 'stored-secret' },
+      openai_capabilities: ['chat_completions'],
+      model_mapping: { 'chatgpt-web/light': 'chatgpt-web/light' }
+    })
+    expect(payload.credentials).not.toHaveProperty('api_key')
+    expect(payload.extra).toMatchObject({
+      openai_responses_forward_mode: 'strict_raw',
+      openai_responses_mode: 'force_responses',
+      openai_apikey_responses_websockets_v2_mode: 'off',
+      openai_apikey_responses_websockets_v2_enabled: false
+    })
+  })
+
+  it('preserves bearer mode for a preset account with an existing upstream key', async () => {
+    const account = buildAccount()
+    account.credentials = {
+      base_url: 'https://bridge.example/v1',
+      openai_upstream_auth_mode: 'bearer',
+      model_mapping: { 'chatgpt-web/light': 'chatgpt-web/light' }
+    }
+    account.credentials_status = { has_api_key: true }
+    account.extra = {
+      openai_responses_forward_mode: 'strict_raw',
+      openai_responses_mode: 'force_responses'
+    }
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
+
+    const wrapper = mountModal(account)
+    expect(wrapper.get('[data-testid="edit-openai-bridge-auth-bearer"]').attributes('aria-checked')).toBe('true')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.openai_upstream_auth_mode).toBe('bearer')
   })
 
   it('lets an explicit normal mode override stale legacy passthrough flags', () => {

@@ -9,16 +9,19 @@
         v-model="row.name"
         type="text"
         class="input flex-1"
+        :aria-label="t('admin.accounts.headerOverride.nameLabel', { index: index + 1 })"
         :placeholder="t('admin.accounts.headerOverride.namePlaceholder')"
       />
       <input
         v-model="row.value"
         type="text"
         class="input flex-1"
+        :aria-label="t('admin.accounts.headerOverride.valueLabel', { index: index + 1 })"
         :placeholder="t('admin.accounts.headerOverride.valuePlaceholder')"
       />
       <button
         type="button"
+        :aria-label="t('admin.accounts.headerOverride.removeRow', { index: index + 1 })"
         class="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
         @click="removeRow(index)"
       >
@@ -36,6 +39,7 @@
 
   <button
     type="button"
+    :aria-label="t('admin.accounts.headerOverride.addRow')"
     class="w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-2 text-gray-600 transition-colors hover:border-gray-400 hover:text-gray-700 dark:border-dark-500 dark:text-gray-400 dark:hover:border-dark-400 dark:hover:text-gray-300"
     @click="addRow"
   >

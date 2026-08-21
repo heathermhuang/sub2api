@@ -7,18 +7,20 @@ const {
   probeUpstreamBillingMock,
   importCodexSessionMock,
   createOpenAICodexPATMock,
+  showErrorMock,
   authIsSimpleMode,
 } = vi.hoisted(() => ({
   createAccountMock: vi.fn(),
   probeUpstreamBillingMock: vi.fn(),
   importCodexSessionMock: vi.fn(),
   createOpenAICodexPATMock: vi.fn(),
+  showErrorMock: vi.fn(),
   authIsSimpleMode: { value: true },
 }))
 
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({
-    showError: vi.fn(),
+    showError: showErrorMock,
     showSuccess: vi.fn(),
     showWarning: vi.fn(),
   }),
@@ -185,6 +187,7 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
       warnings: [],
     })
     createOpenAICodexPATMock.mockReset().mockResolvedValue({})
+    showErrorMock.mockReset()
   })
 
   it('hides only the redundant account toggle when every selected group enables tier pricing', async () => {
@@ -228,8 +231,8 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
     await selectButtonByText(wrapper, 'API Key')
     await wrapper.get('form#create-account-form input[type="text"]').setValue('Strict upstream')
     await wrapper.get('form#create-account-form input[type="password"]').setValue('must-not-store')
-    await wrapper.get('[data-testid="create-openai-responses-forward-mode"]').setValue('strict_raw')
-    await wrapper.get('[data-testid="create-openai-strict-no-auth"]').setValue(true)
+    await wrapper.get('[data-testid="create-openai-target-responses-bridge"]').trigger('click')
+    await wrapper.get('[data-testid="create-openai-bridge-auth-private"]').trigger('click')
     await wrapper.get('form#create-account-form').trigger('submit.prevent')
     await flushPromises()
 
@@ -241,6 +244,81 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
     expect(payload.credentials).not.toHaveProperty('api_key')
     expect(payload.upstream_billing_probe_enabled).toBe(false)
     expect(payload.extra?.openai_apikey_responses_websockets_v2_mode).toBe('off')
+  })
+
+  it('compiles the unofficial ChatGPT Web preset into existing generic account fields', async () => {
+    const wrapper = mountModal()
+    await selectButtonByText(wrapper, 'OpenAI')
+    await selectButtonByText(wrapper, 'API Key')
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('ChatGPT Web bridge')
+    await wrapper.get('[data-testid="create-openai-target-responses-bridge"]').trigger('click')
+    await wrapper.get('[data-testid="create-openai-bridge-chatgpt-web"]').trigger('click')
+    await wrapper.get('[data-testid="create-openai-bridge-auth-private"]').trigger('click')
+    await wrapper.get('[data-testid="create-chatgpt-web-tier-light"]').setValue(true)
+    await wrapper.get('[data-testid="create-chatgpt-web-tier-high"]').setValue(true)
+    await wrapper.get('input[placeholder="admin.accounts.headerOverride.namePlaceholder"]').setValue('X-Bridge-Secret')
+    await wrapper.get('input[placeholder="admin.accounts.headerOverride.valuePlaceholder"]').setValue('test-secret')
+
+    expect(wrapper.get('[data-testid="create-openai-target-responses-bridge"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="create-openai-bridge-chatgpt-web"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.find('[data-testid="create-openai-ws-mode"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="openai-responses-mode-select"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="create-header-override-toggle"]').attributes('role')).toBe('switch')
+    expect(wrapper.get('[data-testid="upstream-billing-auto-probe"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(createAccountMock).toHaveBeenCalledTimes(1)
+    const payload = createAccountMock.mock.calls[0]?.[0]
+    expect(payload.type).toBe('apikey')
+    expect(payload.concurrency).toBe(1)
+    expect(payload.upstream_billing_probe_enabled).toBe(false)
+    expect(payload.credentials).toMatchObject({
+      openai_upstream_auth_mode: 'none',
+      header_override_enabled: true,
+      header_overrides: { 'x-bridge-secret': 'test-secret' },
+      openai_capabilities: ['chat_completions'],
+      model_mapping: {
+        'chatgpt-web/light': 'chatgpt-web/light',
+        'chatgpt-web/high': 'chatgpt-web/high'
+      }
+    })
+    expect(payload.credentials).not.toHaveProperty('api_key')
+    expect(payload.extra).toMatchObject({
+      openai_responses_forward_mode: 'strict_raw',
+      openai_responses_mode: 'force_responses',
+      openai_apikey_responses_websockets_v2_mode: 'off',
+      openai_apikey_responses_websockets_v2_enabled: false
+    })
+  })
+
+  it('requires a bridge-reported tier and a bearer key when those preset choices are selected', async () => {
+    const wrapper = mountModal()
+    await selectButtonByText(wrapper, 'OpenAI')
+    await selectButtonByText(wrapper, 'API Key')
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('ChatGPT Web bridge')
+    await wrapper.get('[data-testid="create-openai-target-responses-bridge"]').trigger('click')
+    await wrapper.get('[data-testid="create-openai-bridge-chatgpt-web"]').trigger('click')
+
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    expect(createAccountMock).not.toHaveBeenCalled()
+    expect(showErrorMock).toHaveBeenLastCalledWith('admin.accounts.openai.bridgeOnboarding.discoveredTiersRequired')
+
+    await wrapper.get('[data-testid="create-chatgpt-web-tier-light"]').setValue(true)
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    expect(createAccountMock).not.toHaveBeenCalled()
+    expect(showErrorMock).toHaveBeenLastCalledWith('admin.accounts.pleaseEnterApiKey')
+
+    await wrapper.get('form#create-account-form input[type="password"]').setValue('bearer-key')
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+    expect(createAccountMock).toHaveBeenCalledTimes(1)
+    expect(createAccountMock.mock.calls[0]?.[0]?.credentials).toMatchObject({
+      api_key: 'bearer-key',
+      openai_upstream_auth_mode: 'bearer',
+      model_mapping: { 'chatgpt-web/light': 'chatgpt-web/light' }
+    })
   })
 
   // namespace 摊平是仅 OAuth 的兼容开关：API Key 走 chat completions 回退桥时由桥自行摊平

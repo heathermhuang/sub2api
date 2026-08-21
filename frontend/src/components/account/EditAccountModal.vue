@@ -129,8 +129,38 @@
           <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
         </div>
 
+        <div v-if="account.platform === 'openai'" class="space-y-4 border-t border-gray-200 pt-4 dark:border-dark-600">
+          <OpenAIResponsesBridgeOnboarding
+            test-id-prefix="edit"
+            :connection-target="openAIConnectionTarget"
+            :bridge-preset="openAIResponsesBridgePreset"
+            :bridge-auth="openAIResponsesBridgeAuth"
+            :tiers="chatGPTWebBridgeTiers"
+            @select-target="selectOpenAIConnectionTarget"
+            @select-preset="selectOpenAIResponsesBridgePreset"
+            @select-auth="selectOpenAIResponsesBridgeAuth"
+            @toggle-tier="toggleChatGPTWebBridgeTier"
+          />
+          <div v-if="openAIConnectionTarget === 'api'">
+            <label class="input-label" for="edit-openai-responses-forward-mode">
+              {{ t('admin.accounts.openai.forwardMode') }}
+            </label>
+            <select
+              id="edit-openai-responses-forward-mode"
+              v-model="openaiResponsesForwardMode"
+              data-testid="edit-openai-responses-forward-mode"
+              class="input"
+            >
+              <option v-for="option in openAIAPIForwardModeOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+            <p class="input-hint">{{ t('admin.accounts.openai.forwardModeDesc') }}</p>
+          </div>
+        </div>
+
         <!-- Model Restriction Section (不适用于 Antigravity) -->
-        <div v-if="account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <div v-if="account.platform !== 'antigravity' && !isEditChatGPTWebBridgePreset" class="border-t border-gray-200 pt-4 dark:border-dark-600">
           <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
 
           <div
@@ -551,6 +581,10 @@
           </div>
           <button
             type="button"
+            role="switch"
+            data-testid="edit-header-override-toggle"
+            :aria-label="t('admin.accounts.headerOverride.title')"
+            :aria-checked="headerOverrideEnabled"
             @click="headerOverrideEnabled = !headerOverrideEnabled"
             :class="[
               'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
@@ -1560,6 +1594,8 @@
               :model-value="upstreamBillingRateSyncEnabled"
               data-testid="upstream-billing-rate-sync"
               :aria-label="t('admin.accounts.upstreamBilling.syncRate')"
+              :disabled="isEditChatGPTWebBridgePreset"
+              :class="isEditChatGPTWebBridgePreset ? 'cursor-not-allowed opacity-60' : ''"
               @update:model-value="handleUpstreamBillingRateSyncChange"
             />
           </div>
@@ -1571,50 +1607,19 @@
         <p class="input-hint">{{ t('admin.accounts.expiresAtHint') }}</p>
       </div>
 
-      <!-- OpenAI Responses forwarding mode -->
       <div
-        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
+        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <label class="input-label" for="edit-openai-responses-forward-mode">
           {{ t('admin.accounts.openai.forwardMode') }}
         </label>
-        <select
-          id="edit-openai-responses-forward-mode"
-          v-model="openaiResponsesForwardMode"
-          data-testid="edit-openai-responses-forward-mode"
-          class="input"
-        >
-          <option v-for="option in openAIResponsesForwardModeOptions" :key="option.value" :value="option.value">
+        <select id="edit-openai-responses-forward-mode" v-model="openaiResponsesForwardMode" class="input">
+          <option v-for="option in openAIAPIForwardModeOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
         </select>
         <p class="input-hint">{{ t('admin.accounts.openai.forwardModeDesc') }}</p>
-        <div
-          v-if="openaiResponsesForwardMode === 'strict_raw'"
-          class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        >
-          {{ t('admin.accounts.openai.forwardModeStrictWarning') }}
-        </div>
-        <label
-          v-if="openaiResponsesForwardMode === 'strict_raw' && account?.type === 'apikey'"
-          class="mt-3 flex items-start gap-3"
-        >
-          <input
-            v-model="openaiStrictNoAuth"
-            data-testid="edit-openai-strict-no-auth"
-            type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
-          <span>
-            <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-              {{ t('admin.accounts.openai.strictNoAuth') }}
-            </span>
-            <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">
-              {{ t('admin.accounts.openai.strictNoAuthDesc') }}
-            </span>
-          </span>
-        </label>
       </div>
 
       <!-- OpenAI Codex namespace 工具摊平（兼容开关，仅 OAuth） -->
@@ -1650,7 +1655,7 @@
 
       <!-- OpenAI Codex hosted image_generation bridge policy -->
       <div
-        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
+        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey') && openAIConnectionTarget === 'api'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <div class="overflow-hidden rounded-lg border border-sky-100 bg-sky-50/60 shadow-sm dark:border-sky-900/50 dark:bg-sky-950/20">
@@ -1710,7 +1715,7 @@
 
       <!-- OpenAI WS Mode 三态（off/ctx_pool/passthrough） -->
       <div
-        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
+        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey') && openAIConnectionTarget === 'api'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <div class="flex items-center justify-between">
@@ -1731,7 +1736,7 @@
 
       <!-- OpenAI APIKey Responses API support mode -->
       <div
-        v-if="account?.platform === 'openai' && account?.type === 'apikey'"
+        v-if="account?.platform === 'openai' && account?.type === 'apikey' && openAIConnectionTarget === 'api'"
         class="space-y-4 border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <div class="flex items-center justify-between gap-4">
@@ -1799,6 +1804,8 @@
           :model-value="upstreamBillingAutoProbeEnabled"
           data-testid="upstream-billing-auto-probe"
           :aria-label="t('admin.accounts.upstreamBilling.autoProbe')"
+          :disabled="isEditChatGPTWebBridgePreset"
+          :class="isEditChatGPTWebBridgePreset ? 'cursor-not-allowed opacity-60' : ''"
           @update:model-value="handleUpstreamBillingAutoProbeChange"
         />
       </div>
@@ -2806,6 +2813,7 @@ import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
 import GrokBaseUrlPresets from '@/components/account/GrokBaseUrlPresets.vue'
 import CnBaseUrlPresets from '@/components/account/CnBaseUrlPresets.vue'
 import HeaderOverrideEditor from '@/components/account/HeaderOverrideEditor.vue'
+import OpenAIResponsesBridgeOnboarding from '@/components/account/OpenAIResponsesBridgeOnboarding.vue'
 import OllamaCloudUsageSettings from '@/components/account/OllamaCloudUsageSettings.vue'
 import {
   applyAntigravityProjectID,
@@ -2827,6 +2835,13 @@ import {
 } from '@/components/account/credentialsBuilder'
 import { formatDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/utils/format'
 import { createStableObjectKeyResolver } from '@/utils/stableObjectKey'
+import {
+  CHATGPT_WEB_BRIDGE_TIERS,
+  buildChatGPTWebIdentityMappings,
+  isChatGPTWebBridgePresetFields,
+  readChatGPTWebIdentityTiers,
+  type ChatGPTWebBridgeTier
+} from '@/utils/openAIResponsesBridgePreset'
 import { allSelectedGroupsEnableLongContextPricing } from '@/components/account/longContextBilling'
 import { VERTEX_LOCATION_OPTIONS } from '@/constants/account'
 import {
@@ -3114,8 +3129,21 @@ const customBaseUrlEnabled = ref(false)
 const customBaseUrl = ref('')
 
 type OpenAIResponsesForwardMode = 'normal' | 'passthrough' | 'strict_raw'
+type OpenAIConnectionTarget = 'api' | 'responses_bridge'
+type OpenAIResponsesBridgePreset = 'generic' | 'chatgpt_web'
+type OpenAIResponsesBridgeAuth = 'bearer' | 'private'
 const openaiResponsesForwardMode = ref<OpenAIResponsesForwardMode>('normal')
 const openaiStrictNoAuth = ref(false)
+const openAIConnectionTarget = ref<OpenAIConnectionTarget>('api')
+const openAIResponsesBridgePreset = ref<OpenAIResponsesBridgePreset>('generic')
+const openAIResponsesBridgeAuth = ref<OpenAIResponsesBridgeAuth>('bearer')
+const chatGPTWebBridgeTiers = ref<ChatGPTWebBridgeTier[]>([])
+const isEditChatGPTWebBridgePreset = computed(() =>
+  props.account?.platform === 'openai' &&
+  props.account?.type === 'apikey' &&
+  openAIConnectionTarget.value === 'responses_bridge' &&
+  openAIResponsesBridgePreset.value === 'chatgpt_web'
+)
 // OpenAI Codex namespace 工具摊平兼容开关（仅 OAuth），缺省关闭即原样保留
 const openaiFlattenNamespacesEnabled = ref(false)
 const openAILongContextBillingEnabled = ref(false)
@@ -3276,6 +3304,86 @@ const openAIResponsesForwardModeOptions = computed(() => {
   }
   return options
 })
+const openAIAPIForwardModeOptions = computed(() =>
+  openAIResponsesForwardModeOptions.value.filter((option) => option.value !== 'strict_raw')
+)
+
+const applyChatGPTWebBridgeTierMappings = () => {
+  const mappings = buildChatGPTWebIdentityMappings(chatGPTWebBridgeTiers.value)
+  allowedModels.value = []
+  modelRestrictionMode.value = 'mapping'
+  modelMappings.value = mappings
+    ? Object.entries(mappings).map(([from, to]) => ({ from, to }))
+    : []
+}
+
+const selectOpenAIConnectionTarget = (target: OpenAIConnectionTarget) => {
+  const wasChatGPTWebPreset = isEditChatGPTWebBridgePreset.value
+  openAIConnectionTarget.value = target
+  if (target === 'responses_bridge') {
+    openaiResponsesForwardMode.value = 'strict_raw'
+    openAIResponsesMode.value = 'force_responses'
+    openAIEndpointCapabilities.value = ['chat_completions']
+    openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
+    return
+  }
+
+  openAIResponsesBridgePreset.value = 'generic'
+  openAIResponsesBridgeAuth.value = 'bearer'
+  openaiResponsesForwardMode.value = openaiResponsesForwardMode.value === 'passthrough'
+    ? 'passthrough'
+    : 'normal'
+  openaiStrictNoAuth.value = false
+  if (wasChatGPTWebPreset) {
+    chatGPTWebBridgeTiers.value = []
+    modelMappings.value = []
+    modelRestrictionMode.value = 'whitelist'
+    openAIResponsesMode.value = 'auto'
+    openAIEndpointCapabilities.value = ['chat_completions', 'embeddings']
+    upstreamBillingAutoProbeEnabled.value = true
+    upstreamBillingRateSyncEnabled.value = false
+    headerOverrideEnabled.value = false
+    headerOverrideRows.value = []
+  }
+}
+
+const selectOpenAIResponsesBridgePreset = (preset: OpenAIResponsesBridgePreset) => {
+  openAIResponsesBridgePreset.value = preset
+  selectOpenAIConnectionTarget('responses_bridge')
+  if (preset !== 'chatgpt_web') {
+    chatGPTWebBridgeTiers.value = []
+    modelMappings.value = []
+    return
+  }
+
+  form.concurrency = 1
+  openAILongContextBillingEnabled.value = false
+  upstreamBillingAutoProbeEnabled.value = false
+  upstreamBillingRateSyncEnabled.value = false
+  headerOverrideEnabled.value = true
+  if (headerOverrideRows.value.length === 0) {
+    headerOverrideRows.value = [{ name: '', value: '' }]
+  }
+  applyChatGPTWebBridgeTierMappings()
+}
+
+const selectOpenAIResponsesBridgeAuth = (auth: OpenAIResponsesBridgeAuth) => {
+  openAIResponsesBridgeAuth.value = auth
+  openaiStrictNoAuth.value = auth === 'private'
+  if (auth === 'private') {
+    upstreamBillingAutoProbeEnabled.value = false
+    upstreamBillingRateSyncEnabled.value = false
+  }
+}
+
+const toggleChatGPTWebBridgeTier = (tier: ChatGPTWebBridgeTier) => {
+  chatGPTWebBridgeTiers.value = chatGPTWebBridgeTiers.value.includes(tier)
+    ? chatGPTWebBridgeTiers.value.filter((candidate) => candidate !== tier)
+    : CHATGPT_WEB_BRIDGE_TIERS.filter((candidate) => (
+        [...chatGPTWebBridgeTiers.value, tier].includes(candidate)
+      ))
+  applyChatGPTWebBridgeTierMappings()
+}
 const openAITextEndpointCapabilityLabel = computed(() => {
   if (openAIResponsesMode.value === 'force_responses') {
     return t('admin.accounts.openai.capabilityResponses')
@@ -3603,6 +3711,10 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   // Load OpenAI passthrough toggle (OpenAI OAuth/SetupToken/API Key)
   openaiResponsesForwardMode.value = 'normal'
   openaiStrictNoAuth.value = false
+  openAIConnectionTarget.value = 'api'
+  openAIResponsesBridgePreset.value = 'generic'
+  openAIResponsesBridgeAuth.value = 'bearer'
+  chatGPTWebBridgeTiers.value = []
   openaiFlattenNamespacesEnabled.value = false
   openAILongContextBillingEnabled.value = false
   editPlanType.value = ''
@@ -3625,6 +3737,8 @@ const syncFormFromAccount = (newAccount: Account | null) => {
       openaiResponsesForwardMode.value = 'strict_raw'
       openaiStrictNoAuth.value =
         (newAccount.credentials as Record<string, unknown> | undefined)?.openai_upstream_auth_mode === 'none'
+      openAIConnectionTarget.value = 'responses_bridge'
+      openAIResponsesBridgeAuth.value = openaiStrictNoAuth.value ? 'private' : 'bearer'
     } else if (configuredForwardMode === 'passthrough') {
       openaiResponsesForwardMode.value = 'passthrough'
     } else if (configuredForwardMode === 'normal' || configuredForwardMode === 'strict_raw') {
@@ -3836,6 +3950,25 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 
     // Load model mappings and detect mode
     loadModelRestrictionFromMapping(credentials.model_mapping as Record<string, unknown> | undefined)
+    if (newAccount.platform === 'openai' && openAIConnectionTarget.value === 'responses_bridge') {
+      chatGPTWebBridgeTiers.value = readChatGPTWebIdentityTiers(credentials.model_mapping)
+      openAIResponsesBridgePreset.value = isChatGPTWebBridgePresetFields(credentials, extra)
+        ? 'chatgpt_web'
+        : 'generic'
+      if (openAIResponsesBridgePreset.value === 'chatgpt_web') {
+        form.concurrency = 1
+        openAIResponsesMode.value = 'force_responses'
+        openAIEndpointCapabilities.value = ['chat_completions']
+        openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
+        upstreamBillingAutoProbeEnabled.value = false
+        upstreamBillingRateSyncEnabled.value = false
+        headerOverrideEnabled.value = true
+        if (headerOverrideRows.value.length === 0) {
+          headerOverrideRows.value = [{ name: '', value: '' }]
+        }
+        applyChatGPTWebBridgeTierMappings()
+      }
+    }
 
     // Load pool mode
     poolModeEnabled.value = credentials.pool_mode === true
@@ -4463,6 +4596,17 @@ const handleSubmit = async () => {
   if (form.status !== 'active' && form.status !== 'inactive' && form.status !== 'error') {
     appStore.showError(t('admin.accounts.pleaseSelectStatus'))
     return
+  }
+
+  if (isEditChatGPTWebBridgePreset.value) {
+    chatGPTWebBridgeTiers.value = CHATGPT_WEB_BRIDGE_TIERS.filter((tier) =>
+      chatGPTWebBridgeTiers.value.includes(tier)
+    )
+    if (chatGPTWebBridgeTiers.value.length === 0) {
+      appStore.showError(t('admin.accounts.openai.bridgeOnboarding.discoveredTiersRequired'))
+      return
+    }
+    applyChatGPTWebBridgeTierMappings()
   }
 
   const updatePayload: Record<string, unknown> = { ...form }
