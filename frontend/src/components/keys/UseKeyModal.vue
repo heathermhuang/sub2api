@@ -110,6 +110,47 @@
           </div>
         </div>
 
+        <section
+          v-if="showNativeCodexInstall"
+          data-testid="codex-web-gpt-install"
+          class="rounded-xl border border-primary-200 bg-primary-50/70 p-4 dark:border-primary-900/70 dark:bg-primary-950/20"
+          :aria-label="t('keys.useKeyModal.openai.nativeInstallTitle')"
+        >
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                {{ t('keys.useKeyModal.openai.nativeInstallTitle') }}
+              </p>
+              <p class="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">
+                {{ t('keys.useKeyModal.openai.nativeInstallDescription') }}
+              </p>
+            </div>
+            <div class="flex flex-shrink-0 flex-wrap gap-2">
+              <a
+                class="btn btn-primary btn-sm"
+                :href="codexNativeInstallLink || undefined"
+                :aria-label="t('keys.useKeyModal.openai.nativeInstallAction')"
+              >
+                {{ t('keys.useKeyModal.openai.nativeInstallAction') }}
+              </a>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :aria-label="t('keys.useKeyModal.openai.copyKeyForInstaller')"
+                @click="copyInstallerKey"
+              >
+                {{ installerKeyCopied
+                  ? t('keys.useKeyModal.copied')
+                  : t('keys.useKeyModal.openai.copyKeyForInstaller') }}
+              </button>
+            </div>
+          </div>
+          <div class="mt-3 space-y-1 border-l-2 border-amber-400 pl-3 text-xs leading-5 text-amber-800 dark:text-amber-200">
+            <p>{{ t('keys.useKeyModal.openai.nativeInstallAllowance') }}</p>
+            <p>{{ t('keys.useKeyModal.openai.nativeInstallTools') }}</p>
+          </div>
+        </section>
+
         <!-- OS/Shell Tabs -->
         <div v-if="showShellTabs" class="overflow-x-auto border-b border-gray-200 dark:border-dark-700">
           <nav class="-mb-px flex min-w-max gap-4" aria-label="Tabs">
@@ -202,6 +243,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useClipboard } from '@/composables/useClipboard'
 import type { GroupPlatform } from '@/types'
+import { buildCodexWebGptInstallLink } from '@/utils/codexWebGptInstall'
 
 interface Props {
   show: boolean
@@ -239,6 +281,7 @@ const activeTab = ref<string>('unix')
 const activeClientTab = ref<string>('claude')
 type CodexAuthMode = 'legacy' | 'api-key'
 const codexAuthMode = ref<CodexAuthMode>('legacy')
+const installerKeyCopied = ref(false)
 
 // Reset tabs when platform changes
 const defaultClientTab = computed(() => {
@@ -265,6 +308,7 @@ watch(() => props.platform, () => {
 watch(() => props.show, (show) => {
   if (show) {
     codexAuthMode.value = 'legacy'
+    installerKeyCopied.value = false
   }
 })
 
@@ -395,6 +439,30 @@ const showCodexAuthMode = computed(() =>
   props.platform === 'openai' &&
   (activeClientTab.value === 'codex' || activeClientTab.value === 'codex-ws')
 )
+
+const codexNativeInstallLink = computed(() => {
+  try {
+    return buildCodexWebGptInstallLink({
+      baseUrl: props.baseUrl || window.location.origin,
+      name: t('keys.useKeyModal.openai.nativeInstallProviderName')
+    })
+  } catch {
+    return null
+  }
+})
+
+const showNativeCodexInstall = computed(() =>
+  props.platform === 'openai' &&
+  activeClientTab.value === 'codex' &&
+  codexNativeInstallLink.value !== null
+)
+
+const copyInstallerKey = async () => {
+  installerKeyCopied.value = await clipboardCopy(props.apiKey, t('keys.copied'))
+  if (installerKeyCopied.value) {
+    setTimeout(() => { installerKeyCopied.value = false }, 2000)
+  }
+}
 
 const currentTabs = computed(() => {
   if (!showShellTabs.value) return []

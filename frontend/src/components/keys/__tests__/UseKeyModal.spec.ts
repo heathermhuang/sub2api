@@ -304,6 +304,43 @@ describe('UseKeyModal', () => {
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
   })
 
+  it('offers a secret-free native Codex installer handoff and copies the key separately', async () => {
+    copyToClipboardMock.mockClear()
+    const wrapper = mount(UseKeyModal, {
+      props: {
+        show: true,
+        apiKey: 'sk-downstream-secret',
+        baseUrl: 'https://example.com',
+        platform: 'openai'
+      },
+      global: {
+        stubs: {
+          BaseDialog: {
+            template: '<div><slot /><slot name="footer" /></div>'
+          },
+          Icon: {
+            template: '<span />'
+          }
+        }
+      }
+    })
+
+    const install = wrapper.get('[data-testid="codex-web-gpt-install"]')
+    const link = install.get('a')
+    expect(link.attributes('href')).toContain('codexwebgpt://install/responses?')
+    expect(link.attributes('href')).toContain('endpoint=https%3A%2F%2Fexample.com%2Fv1')
+    expect(link.attributes('href')).not.toContain('sk-downstream-secret')
+    expect(install.text()).toContain('keys.useKeyModal.openai.nativeInstallAllowance')
+    expect(install.text()).toContain('keys.useKeyModal.openai.nativeInstallTools')
+
+    const copyButton = install.findAll('button').find((button) =>
+      button.text().includes('keys.useKeyModal.openai.copyKeyForInstaller')
+    )
+    expect(copyButton).toBeDefined()
+    await copyButton!.trigger('click')
+    expect(copyToClipboardMock).toHaveBeenCalledWith('sk-downstream-secret', 'keys.copied')
+  })
+
   it('renders API Key Mode authorization in OpenAI Codex config', async () => {
     const wrapper = mount(UseKeyModal, {
       props: {

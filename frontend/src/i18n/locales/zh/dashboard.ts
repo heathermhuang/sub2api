@@ -144,6 +144,13 @@ export default {
         authModeLegacy: '兼容模式',
         authModeApiKey: 'API Key Mode',
         authModeApiKeyRestartNotice: '保存此配置后，必须完全退出并重启 Codex Desktop 或 CLI，然后新建 task，让客户端重新构建工具注册表。',
+        nativeInstallTitle: '安全安装到 Codex',
+        nativeInstallDescription: '打开 Codex Web GPT，将此 Responses 路由合并到现有 Codex 配置。启动器会记录当前路由与认证文件、清除模型缓存，并在断开时恢复。',
+        nativeInstallAction: '打开 Codex Web GPT',
+        copyKeyForInstaller: '复制密钥到安装器',
+        nativeInstallProviderName: 'Sub2API Responses bridge',
+        nativeInstallAllowance: 'ChatGPT Web 用量通过非官方浏览器自动化使用，不会转换为 OpenAI API 余额。',
+        nativeInstallTools: '这里只安装提供方与模型目录。本地电脑工具仍需在 Codex Web GPT 中配置 Full MCP Harness。',
         configTomlHint: '请确保以下内容位于 config.toml 文件的开头部分',
         note: '请确保配置目录存在。macOS/Linux 用户可运行 mkdir -p ~/.codex 创建目录。',
         noteWindows:
