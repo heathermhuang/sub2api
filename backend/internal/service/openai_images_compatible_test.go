@@ -130,19 +130,22 @@ func TestCompatibleImagesForwardGemini(t *testing.T) {
 
 func TestCompatibleImagesNativeAccountsRejectGeminiBeforeForwarding(t *testing.T) {
 	for _, typ := range []string{AccountTypeOAuth, AccountTypeSetupToken} {
+		// v0.2.4 native Images applies channel mappings only; API-key account
+		// mappings are covered by TestCompatibleImagesForwardGemini.
 		for _, mapping := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/mapping=%t", typ, mapping), func(t *testing.T) {
 				model := "gemini-3-pro-image"
 				account := &Account{Platform: PlatformOpenAI, Type: typ, Credentials: map[string]any{"access_token": "unused"}}
+				channelModel := ""
 				if mapping {
-					account.Credentials["model_mapping"] = map[string]any{"gpt-image-2": model}
+					channelModel = model
 					model = "gpt-image-2"
 				}
 				c, _ := gin.CreateTestContext(httptest.NewRecorder())
 				c.Request = httptest.NewRequest(http.MethodPost, openAIImagesGenerationsEndpoint, nil)
 				upstream := &httpUpstreamRecorder{}
 				svc := &OpenAIGatewayService{httpUpstream: upstream}
-				_, err := svc.ForwardImages(context.Background(), c, account, nil, &OpenAIImagesRequest{Model: model}, "")
+				_, err := svc.ForwardImages(context.Background(), c, account, nil, &OpenAIImagesRequest{Model: model}, channelModel)
 				require.ErrorContains(t, err, "images endpoint requires an image model")
 				require.Empty(t, upstream.requests)
 			})
