@@ -1,0 +1,42 @@
+name: Images 6076 regression proof
+on:
+  push:
+    branches: [validation/images-6076]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Confirm baseline rejection
+        run: |
+          git checkout 8e23e131589ff09773819fcf898cb3a623fb27a4
+          cd backend
+          set +e
+          go test -tags=unit ./internal/service -run '^TestCompatibleImages' -count=1 > /tmp/images-before.log 2>&1
+          result=$?
+          set -e
+          cat /tmp/images-before.log
+          test "$result" -ne 0
+          grep -q 'images endpoint requires an image model' /tmp/images-before.log
+          ! grep -q '\[build failed\]' /tmp/images-before.log
+      - name: Verify fixed behavior and race safety
+        run: |
+          git checkout 9fedf899e2d26fa33f295211ca9393b54ad05c14
+          cd backend
+          go test -tags=unit ./internal/service ./internal/handler ./internal/server/routes -run 'TestCompatibleImages|TestCompositeCompatibleImages|Test.*Images|Test.*ImageCapability|TestCompositeTargetPlatform' -count=1 | tee /tmp/images-after.log
+          go test -race -tags=unit ./internal/service ./internal/server/routes -run 'TestCompatibleImages|TestCompositeCompatibleImages' -count=1 | tee /tmp/images-race.log
+          go build ./cmd/server
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: images-6076-validation
+          path: /tmp/images-*.log
