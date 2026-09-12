@@ -1,0 +1,49 @@
+name: Images 6076 custom release build
+on:
+  push:
+    branches: [build/images6076-release]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Build the retained custom frontend
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Verify custom image and strict Responses paths
+        working-directory: backend
+        run: |
+          go test -p 1 -tags=unit ./internal/service ./internal/handler ./internal/server/routes -run 'TestCompatibleImages|TestCompositeCompatibleImages|Test.*Strict' -count=1
+      - name: Build and package the exact custom release
+        run: |
+          mkdir release
+          cd backend
+          CGO_ENABLED=0 go build -p 1 -tags embed -trimpath -ldflags="-s -w -X main.Version=0.2.4-byok-strict-images6076 -X main.Commit=$GITHUB_SHA" -o ../release/sub2api ./cmd/server
+          cd ..
+          tar -C backend/internal/web/dist -czf release/frontend-dist.tar.gz .
+          git archive --format=tar.gz HEAD > release/source.tar.gz
+          git rev-parse HEAD > release/source-revision.txt
+          cd release
+          sha256sum sub2api frontend-dist.tar.gz source.tar.gz source-revision.txt > SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: images6076-custom-release
+          path: release/
+          retention-days: 7
