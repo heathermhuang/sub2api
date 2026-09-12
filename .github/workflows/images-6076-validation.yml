@@ -30,7 +30,7 @@ jobs:
           ! grep -q '\[build failed\]' /tmp/images-before.log
       - name: Verify fixed behavior and race safety
         run: |
-          git checkout 9fedf899e2d26fa33f295211ca9393b54ad05c14
+          git checkout baa39f39e8a706fb8a6148565f3c10b9c7757f54
           cd backend
           go test -tags=unit ./internal/service ./internal/handler ./internal/server/routes -run 'TestCompatibleImages|TestCompositeCompatibleImages|Test.*Images|Test.*ImageCapability|TestCompositeTargetPlatform' -count=1 | tee /tmp/images-after.log
           go test -race -tags=unit ./internal/service ./internal/server/routes -run 'TestCompatibleImages|TestCompositeCompatibleImages' -count=1 | tee /tmp/images-race.log
